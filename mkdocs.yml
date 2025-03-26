@@ -1,6 +1,6 @@
-site_name: PredictEase
-repo_url:  https://github.com/MateusKaiss/PredictEase
-repo_name: MateusKaiss/PredictEase
+site_name: predictease
+repo_url:  https://github.com/MateusKaiss/predictease
+repo_name: MateusKaiss/predictease
 edit_uri:  tree/master/docs
 
 theme:
