@@ -17,4 +17,8 @@ def parse_args():
         help='Path to the exogenous CSV file (optional)',
     )
 
+    parser.add_argument(
+        '--explore', action='store_true', help='Initial data exploration plot'
+    )
+
     return parser.parse_args()
