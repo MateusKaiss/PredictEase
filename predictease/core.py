@@ -7,6 +7,7 @@ from .analysis.visualization import (
     plot_exogenous_over_time,
 )
 from .models.arima import ARIMAModel
+from .models.ml_models import MLModel
 from .models.prophet import ProphetModel
 
 
@@ -36,7 +37,6 @@ def run(
         arima_model = ARIMAModel()
         arima_model.fit(y)
         forecast = arima_model.predict(steps=forecast_steps)
-
         print(f'\n Forecast:\n{forecast}')
 
     elif model == 'prophet':
@@ -46,6 +46,33 @@ def run(
         prophet_model = ProphetModel()
         prophet_model.fit(y)
         forecast = prophet_model.predict(steps=forecast_steps)
+        print(f'\n Forecast:\n{forecast}')
+
+    elif model in ['linear', 'rf', 'xgb', 'lgbm']:
+        if data.exog is None:
+            raise ValueError(' Exogenous data is required for ML models.')
+
+        print(
+            f'\n Training ML model ({model}) and forecasting {forecast_steps} steps...'
+        )
+
+        exog = data.exog.copy()
+        exog['date'] = pd.to_datetime(exog['date'])
+        exog.set_index('date', inplace=True)
+
+    X = exog.reindex(y.index)
+
+    if X.isnull().any().any():
+        print(
+            ' Exogenous data has missing values. Filling them with forward fill.'
+        )
+        X = X.fillna(method='ffill')
+
+        ml_model = MLModel(model_type=model)
+        ml_model.fit(X, y)
+
+        X_future = exog.iloc[-forecast_steps:]
+        forecast = ml_model.predict(X_future)
 
         print(f'\n Forecast:\n{forecast}')
 

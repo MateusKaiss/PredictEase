@@ -29,8 +29,8 @@ def parse_args():
         '--model',
         type=str,
         default=None,
-        choices=['arima', 'prophet'],
-        help='Model to train and predict (e.g., arima, prophet)',
+        choices=['arima', 'prophet', 'linear', 'rf', 'xgb', 'lgbm'],
+        help='Model to train and predict (e.g., arima, prophet, linear, rf, xgb, lgbm)',
     )
 
     parser.add_argument(
