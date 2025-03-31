@@ -32,9 +32,15 @@ def parse_args():
         choices=[
             'arima',
             'prophet',
-            'linear', 'rf', 'xgb', 'lgbm',
-            'naive', 'mean', 'seasonal_naive',
-            'lstm', 'mlp'
+            'linear',
+            'rf',
+            'xgb',
+            'lgbm',
+            'naive',
+            'mean',
+            'seasonal_naive',
+            'lstm',
+            'mlp',
         ],
         help=(
             'Model to train and predict. '
