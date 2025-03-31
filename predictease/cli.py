@@ -7,7 +7,9 @@ def parse_args():
     )
 
     parser.add_argument(
-        'endog_path', type=str, help='Path to the endogenous CSV file'
+        'endog_path',
+        type=str,
+        help='Path to the endogenous CSV file',
     )
 
     parser.add_argument(
@@ -18,15 +20,17 @@ def parse_args():
     )
 
     parser.add_argument(
-        '--explore', action='store_true', help='Initial data exploration plot'
+        '--explore',
+        action='store_true',
+        help='Initial data exploration plot',
     )
 
     parser.add_argument(
         '--model',
         type=str,
         default=None,
-        choices=['arima'],
-        help='Model to train and predict (e.g., arima)',
+        choices=['arima', 'prophet'],
+        help='Model to train and predict (e.g., arima, prophet)',
     )
 
     parser.add_argument(
