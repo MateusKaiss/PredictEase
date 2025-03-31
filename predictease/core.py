@@ -9,6 +9,7 @@ from .analysis.visualization import (
 from .models.arima import ARIMAModel
 from .models.baseline import MeanModel, NaiveModel, SeasonalNaiveModel
 from .models.ml_models import MLModel
+from .models.nn_models import LSTMModel, MLPModel
 from .models.prophet import ProphetModel
 
 
@@ -19,6 +20,9 @@ def run(
     model=None,
     forecast_steps=10,
     seasonal_length=12,
+    window_size=12,
+    epochs=100,
+    batch_size=16,
 ):
     print(f'Loading endogenous data from: {endog_path}')
     data: TimeSeriesDataset = load_data(endog_path, exog_path)
@@ -61,11 +65,9 @@ def run(
         print(
             f'\n Training ML model ({model}) and forecasting {forecast_steps} steps...'
         )
-
         exog = data.exog.copy()
         exog['date'] = pd.to_datetime(exog['date'])
         exog.set_index('date', inplace=True)
-
         X = exog.reindex(y.index)
 
         if X.isnull().any().any():
@@ -76,15 +78,12 @@ def run(
 
         ml_model = MLModel(model_type=model)
         ml_model.fit(X, y)
-
         X_future = exog.iloc[-forecast_steps:]
         forecast = ml_model.predict(X_future)
-
         print(f'\n Forecast:\n{forecast}')
 
     elif model in ['naive', 'mean', 'seasonal_naive']:
         print(f'\n Running baseline model: {model}...')
-
         if model == 'naive':
             baseline_model = NaiveModel()
         elif model == 'mean':
@@ -94,7 +93,28 @@ def run(
 
         baseline_model.fit(y)
         forecast = baseline_model.predict(steps=forecast_steps)
+        print(f'\n Forecast:\n{forecast}')
 
+    elif model == 'lstm':
+        print(
+            f'\n Training LSTM model and forecasting {forecast_steps} steps...'
+        )
+        lstm_model = LSTMModel(
+            window_size=window_size, epochs=epochs, batch_size=batch_size
+        )
+        lstm_model.fit(y)
+        forecast = lstm_model.predict(steps=forecast_steps)
+        print(f'\n Forecast:\n{forecast}')
+
+    elif model == 'mlp':
+        print(
+            f'\n Training MLP model and forecasting {forecast_steps} steps...'
+        )
+        mlp_model = MLPModel(
+            window_size=window_size, epochs=epochs, batch_size=batch_size
+        )
+        mlp_model.fit(y)
+        forecast = mlp_model.predict(steps=forecast_steps)
         print(f'\n Forecast:\n{forecast}')
 
     elif model:

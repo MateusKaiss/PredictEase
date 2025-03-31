@@ -39,12 +39,35 @@ def parse_args():
             'naive',
             'mean',
             'seasonal_naive',
+            'lstm',
+            'mlp',
         ],
         help=(
             'Model to train and predict. '
             'Options: arima, prophet, linear, rf, xgb, lgbm, '
-            'naive, mean, seasonal_naive'
+            'naive, mean, seasonal_naive, lstm, mlp'
         ),
+    )
+
+    parser.add_argument(
+        '--window_size',
+        type=int,
+        default=12,
+        help='Window size for neural network models (e.g., LSTM, MLP)',
+    )
+
+    parser.add_argument(
+        '--epochs',
+        type=int,
+        default=100,
+        help='Number of training epochs for neural network models',
+    )
+
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=16,
+        help='Batch size for training neural network models',
     )
 
     parser.add_argument(
