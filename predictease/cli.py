@@ -42,7 +42,7 @@ def parse_args():
             'naive, mean, seasonal_naive, lstm, mlp'
         ),
     )
-    
+
     parser.add_argument(
         '--window_size',
         type=int,
@@ -55,6 +55,13 @@ def parse_args():
         type=int,
         default=100,
         help='Number of training epochs for neural network models',
+    )
+
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=16,
+        help='Batch size for training neural network models',
     )
 
     parser.add_argument(

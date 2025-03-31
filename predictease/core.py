@@ -22,6 +22,7 @@ def run(
     seasonal_length=12,
     window_size=12,
     epochs=100,
+    batch_size=16,
 ):
     print(f'Loading endogenous data from: {endog_path}')
     data: TimeSeriesDataset = load_data(endog_path, exog_path)
@@ -88,14 +89,14 @@ def run(
 
     elif model == 'lstm':
         print(f'\n Training LSTM model and forecasting {forecast_steps} steps...')
-        lstm_model = LSTMModel(window_size=window_size, epochs=epochs)
+        lstm_model = LSTMModel(window_size=window_size, epochs=epochs, batch_size=batch_size)
         lstm_model.fit(y)
         forecast = lstm_model.predict(steps=forecast_steps)
         print(f'\n Forecast:\n{forecast}')
 
     elif model == 'mlp':
         print(f'\n Training MLP model and forecasting {forecast_steps} steps...')
-        mlp_model = MLPModel(window_size=window_size, epochs=epochs)
+        mlp_model = MLPModel(window_size=window_size, epochs=epochs, batch_size=batch_size)
         mlp_model.fit(y)
         forecast = mlp_model.predict(steps=forecast_steps)
         print(f'\n Forecast:\n{forecast}')
