@@ -9,4 +9,5 @@ if __name__ == '__main__':
         explore=args.explore,
         model=args.model,
         forecast_steps=args.forecast_steps,
+        seasonal_length=args.seasonal_length,
     )

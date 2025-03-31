@@ -29,8 +29,22 @@ def parse_args():
         '--model',
         type=str,
         default=None,
-        choices=['arima', 'prophet', 'linear', 'rf', 'xgb', 'lgbm'],
-        help='Model to train and predict (e.g., arima, prophet, linear, rf, xgb, lgbm)',
+        choices=[
+            'arima',
+            'prophet',
+            'linear',
+            'rf',
+            'xgb',
+            'lgbm',
+            'naive',
+            'mean',
+            'seasonal_naive',
+        ],
+        help=(
+            'Model to train and predict. '
+            'Options: arima, prophet, linear, rf, xgb, lgbm, '
+            'naive, mean, seasonal_naive'
+        ),
     )
 
     parser.add_argument(
@@ -38,6 +52,13 @@ def parse_args():
         type=int,
         default=10,
         help='Number of steps ahead to forecast',
+    )
+
+    parser.add_argument(
+        '--seasonal_length',
+        type=int,
+        default=12,
+        help='Season length for seasonal naive model (e.g., 12 for monthly data with yearly seasonality)',
     )
 
     return parser.parse_args()
