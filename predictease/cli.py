@@ -21,4 +21,19 @@ def parse_args():
         '--explore', action='store_true', help='Initial data exploration plot'
     )
 
+    parser.add_argument(
+        '--model',
+        type=str,
+        default=None,
+        choices=['arima'],
+        help='Model to train and predict (e.g., arima)',
+    )
+
+    parser.add_argument(
+        '--forecast_steps',
+        type=int,
+        default=10,
+        help='Number of steps ahead to forecast',
+    )
+
     return parser.parse_args()
