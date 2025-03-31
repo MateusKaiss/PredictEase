@@ -7,6 +7,7 @@ from .analysis.visualization import (
     plot_exogenous_over_time,
 )
 from .models.arima import ARIMAModel
+from .models.prophet import ProphetModel
 
 
 def run(
@@ -22,20 +23,31 @@ def run(
     else:
         print('\n🛈 Skipping plots (use --explore to enable)')
 
+    df = data.endog.copy()
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+    target_col = [col for col in df.columns if col != 'date'][0]
+    y = df[target_col]
+
     if model == 'arima':
         print(
-            f'\ Training ARIMA model and forecasting {forecast_steps} steps...'
+            f'\n Training ARIMA model and forecasting {forecast_steps} steps...'
         )
-        df = data.endog.copy()
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        target_col = [col for col in df.columns if col != 'date'][0]
-        y = df[target_col]
-
         arima_model = ARIMAModel()
         arima_model.fit(y)
         forecast = arima_model.predict(steps=forecast_steps)
 
         print(f'\n Forecast:\n{forecast}')
+
+    elif model == 'prophet':
+        print(
+            f'\n Training Prophet model and forecasting {forecast_steps} steps...'
+        )
+        prophet_model = ProphetModel()
+        prophet_model.fit(y)
+        forecast = prophet_model.predict(steps=forecast_steps)
+
+        print(f'\n Forecast:\n{forecast}')
+
     elif model:
         print(f' Model "{model}" is not yet implemented.')
