@@ -10,4 +10,7 @@ if __name__ == '__main__':
         model=args.model,
         forecast_steps=args.forecast_steps,
         seasonal_length=args.seasonal_length,
+        window_size=args.window_size,
+        epochs=args.epochs,
     )
+
