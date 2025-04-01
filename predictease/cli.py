@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument(
         '--seasonal_length',
         type=int,
-        default=12,
+        default=None,
         help='Season length for seasonal naive model (e.g., 12 for monthly data with yearly seasonality)',
     )
 
