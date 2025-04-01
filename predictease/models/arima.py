@@ -23,7 +23,6 @@ class ARIMAModel:
             max_order=self.max_order,
         )
         self.order = auto_model.order
-        print(f' Auto ARIMA selected order: {self.order}')
 
         self.model = StatsmodelsARIMA(y, order=self.order)
         self.fitted_model = self.model.fit()
@@ -31,4 +30,5 @@ class ARIMAModel:
     def predict(self, steps: int = 1) -> pd.Series:
         if self.fitted_model is None:
             raise RuntimeError('You need to call `.fit()` before predicting.')
+        print(f' Auto ARIMA selected order: {self.order}')
         return self.fitted_model.forecast(steps=steps)
