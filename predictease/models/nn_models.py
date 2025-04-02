@@ -7,10 +7,19 @@ from tensorflow.keras.optimizers import Adam
 
 
 class LSTMModel:
-    def __init__(self, window_size=12, epochs=100, batch_size=16):
+    def __init__(
+        self,
+        window_size=12,
+        epochs=100,
+        batch_size=16,
+        hidden_units=64,
+        activation='relu',
+    ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
+        self.hidden_units = hidden_units
+        self.activation = activation
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -35,7 +44,11 @@ class LSTMModel:
 
         self.model = Sequential(
             [
-                LSTM(50, activation='relu', input_shape=(self.window_size, 1)),
+                LSTM(
+                    self.hidden_units,
+                    activation=self.activation,
+                    input_shape=(self.window_size, 1),
+                ),
                 Dense(1),
             ]
         )
@@ -66,10 +79,19 @@ class LSTMModel:
 
 
 class MLPModel:
-    def __init__(self, window_size=12, epochs=100, batch_size=16):
+    def __init__(
+        self,
+        window_size=12,
+        epochs=100,
+        batch_size=16,
+        hidden_units=64,
+        activation='relu',
+    ):
         self.window_size = window_size
         self.epochs = epochs
         self.batch_size = batch_size
+        self.hidden_units = hidden_units
+        self.activation = activation
         self.scaler = MinMaxScaler()
         self.model = None
         self.last_window = None
@@ -93,7 +115,11 @@ class MLPModel:
 
         self.model = Sequential(
             [
-                Dense(64, activation='relu', input_shape=(self.window_size,)),
+                Dense(
+                    self.hidden_units,
+                    activation=self.activation,
+                    input_shape=(self.window_size,),
+                ),
                 Dense(1),
             ]
         )

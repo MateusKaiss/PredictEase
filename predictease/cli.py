@@ -57,6 +57,21 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--hidden_units',
+        type=int,
+        default=64,
+        help='Number of hidden units in LSTM/MLP layers',
+    )
+
+    parser.add_argument(
+        '--activation',
+        type=str,
+        default='relu',
+        choices=['relu', 'tanh', 'sigmoid', 'linear'],
+        help='Activation function for neural networks',
+    )
+
+    parser.add_argument(
         '--epochs',
         type=int,
         default=100,

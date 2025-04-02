@@ -44,6 +44,8 @@ def get_model(
     window_size: int,
     epochs: int,
     batch_size: int,
+    hidden_units: int,
+    activation: str,
 ) -> Union[
     ARIMAModel,
     ProphetModel,
@@ -96,13 +98,21 @@ def get_model(
     elif model_name == 'lstm':
         print('\n Training LSTM model...')
         return LSTMModel(
-            window_size=window_size, epochs=epochs, batch_size=batch_size
+            window_size=window_size,
+            epochs=epochs,
+            batch_size=batch_size,
+            hidden_units=hidden_units,
+            activation=activation,
         )
 
     elif model_name == 'mlp':
         print('\n Training MLP model...')
         return MLPModel(
-            window_size=window_size, epochs=epochs, batch_size=batch_size
+            window_size=window_size,
+            epochs=epochs,
+            batch_size=batch_size,
+            hidden_units=hidden_units,
+            activation=activation,
         )
 
     else:
@@ -118,9 +128,19 @@ def run_model(
     window_size: int,
     epochs: int,
     batch_size: int,
+    hidden_units: int,
+    activation: str,
 ):
     result = get_model(
-        model, data, y, seasonal_length, window_size, epochs, batch_size
+        model,
+        data,
+        y,
+        seasonal_length,
+        window_size,
+        epochs,
+        batch_size,
+        hidden_units,
+        activation,
     )
 
     if isinstance(result, tuple):
@@ -143,6 +163,8 @@ def run(
     window_size: int = 12,
     epochs: int = 100,
     batch_size: int = 16,
+    hidden_units: int = 64,
+    activation: str = 'relu',
 ):
     data, y = load_and_prepare_data(endog_path, exog_path)
 
@@ -160,6 +182,8 @@ def run(
         window_size=window_size,
         epochs=epochs,
         batch_size=batch_size,
+        hidden_units=hidden_units,
+        activation=activation,
     )
 
     print(f'\n Forecast:\n{forecast}')
