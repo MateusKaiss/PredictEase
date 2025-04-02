@@ -12,5 +12,7 @@ if __name__ == '__main__':
         seasonal_length=args.seasonal_length,
         window_size=args.window_size,
         epochs=args.epochs,
-        batch_size=16,
+        batch_size=args.batch_size,
+        hidden_units=args.hidden_units,
+        activation=args.activation,
     )
