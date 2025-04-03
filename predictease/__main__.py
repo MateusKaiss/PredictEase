@@ -6,6 +6,7 @@ if __name__ == '__main__':
     run(
         args.endog_path,
         args.exog_path,
+        future_exog_path=args.future_exog_path,
         explore=args.explore,
         model=args.model,
         forecast_steps=args.forecast_steps,
