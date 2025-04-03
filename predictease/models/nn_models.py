@@ -20,62 +20,56 @@ class LSTMModel:
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
-        self.scaler = MinMaxScaler()
+        self.scaler_X = MinMaxScaler()
+        self.scaler_y = MinMaxScaler()
         self.model = None
-        self.last_window = None
 
-    def _create_sequences(self, series):
-        X, y = [], []
-        for i in range(len(series) - self.window_size):
-            X.append(series[i : i + self.window_size])
-            y.append(series[i + self.window_size])
-        return np.array(X), np.array(y)
-
-    def fit(self, y: pd.Series):
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        X = X.copy()
         y = y.dropna()
-        if len(y) <= self.window_size:
-            raise ValueError(
-                f'Series too short for window size {self.window_size}'
-            )
 
-        scaled_y = self.scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
-        X, y_seq = self._create_sequences(scaled_y)
-        X = X.reshape((X.shape[0], X.shape[1], 1))
+        if len(X) != len(y):
+            raise ValueError('X and y must have the same length.')
+
+        X_scaled = self.scaler_X.fit_transform(X)
+        y_scaled = self.scaler_y.fit_transform(
+            y.values.reshape(-1, 1)
+        ).flatten()
+
+        X_seq = X_scaled.reshape(
+            (X_scaled.shape[0], 1, X_scaled.shape[1])
+        )  # (samples, time_step=1, features)
 
         self.model = Sequential(
             [
                 LSTM(
                     self.hidden_units,
                     activation=self.activation,
-                    input_shape=(self.window_size, 1),
+                    input_shape=(1, X_seq.shape[2]),
                 ),
                 Dense(1),
             ]
         )
         self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
-            X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
+            X_seq,
+            y_scaled,
+            epochs=self.epochs,
+            batch_size=self.batch_size,
+            verbose=0,
         )
 
-        self.last_window = scaled_y[-self.window_size :]
-
-    def predict(self, steps: int = 1) -> pd.Series:
-        if self.last_window is None or self.model is None:
+    def predict(self, X_future: pd.DataFrame) -> pd.Series:
+        if self.model is None:
             raise RuntimeError('Model must be fit before predicting.')
 
-        window = self.last_window.copy()
-        preds = []
-
-        for _ in range(steps):
-            X_input = window.reshape((1, self.window_size, 1))
-            pred = self.model.predict(X_input, verbose=0)[0][0]
-            preds.append(pred)
-            window = np.append(window[1:], pred)
-
-        preds = self.scaler.inverse_transform(
-            np.array(preds).reshape(-1, 1)
-        ).flatten()
-        return pd.Series(preds)
+        X_scaled = self.scaler_X.transform(X_future)
+        X_seq = X_scaled.reshape((X_scaled.shape[0], 1, X_scaled.shape[1]))
+        preds = self.model.predict(X_seq, verbose=0).flatten()
+        return pd.Series(
+            self.scaler_y.inverse_transform(preds.reshape(-1, 1)).flatten(),
+            index=X_future.index,
+        )
 
 
 class MLPModel:
@@ -92,58 +86,48 @@ class MLPModel:
         self.batch_size = batch_size
         self.hidden_units = hidden_units
         self.activation = activation
-        self.scaler = MinMaxScaler()
+        self.scaler_X = MinMaxScaler()
+        self.scaler_y = MinMaxScaler()
         self.model = None
-        self.last_window = None
 
-    def _create_sequences(self, series):
-        X, y = [], []
-        for i in range(len(series) - self.window_size):
-            X.append(series[i : i + self.window_size])
-            y.append(series[i + self.window_size])
-        return np.array(X), np.array(y)
-
-    def fit(self, y: pd.Series):
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        X = X.copy()
         y = y.dropna()
-        if len(y) <= self.window_size:
-            raise ValueError(
-                f'Series too short for window size {self.window_size}'
-            )
 
-        scaled_y = self.scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
-        X, y_seq = self._create_sequences(scaled_y)
+        if len(X) != len(y):
+            raise ValueError('X and y must have the same length.')
+
+        X_scaled = self.scaler_X.fit_transform(X)
+        y_scaled = self.scaler_y.fit_transform(
+            y.values.reshape(-1, 1)
+        ).flatten()
 
         self.model = Sequential(
             [
                 Dense(
                     self.hidden_units,
                     activation=self.activation,
-                    input_shape=(self.window_size,),
+                    input_shape=(X_scaled.shape[1],),
                 ),
                 Dense(1),
             ]
         )
         self.model.compile(optimizer=Adam(), loss='mse')
         self.model.fit(
-            X, y_seq, epochs=self.epochs, batch_size=self.batch_size, verbose=0
+            X_scaled,
+            y_scaled,
+            epochs=self.epochs,
+            batch_size=self.batch_size,
+            verbose=0,
         )
 
-        self.last_window = scaled_y[-self.window_size :]
-
-    def predict(self, steps: int = 1) -> pd.Series:
-        if self.last_window is None or self.model is None:
+    def predict(self, X_future: pd.DataFrame) -> pd.Series:
+        if self.model is None:
             raise RuntimeError('Model must be fit before predicting.')
 
-        window = self.last_window.copy()
-        preds = []
-
-        for _ in range(steps):
-            X_input = window.reshape((1, self.window_size))
-            pred = self.model.predict(X_input, verbose=0)[0][0]
-            preds.append(pred)
-            window = np.append(window[1:], pred)
-
-        preds = self.scaler.inverse_transform(
-            np.array(preds).reshape(-1, 1)
-        ).flatten()
-        return pd.Series(preds)
+        X_scaled = self.scaler_X.transform(X_future)
+        preds = self.model.predict(X_scaled, verbose=0).flatten()
+        return pd.Series(
+            self.scaler_y.inverse_transform(preds.reshape(-1, 1)).flatten(),
+            index=X_future.index,
+        )
