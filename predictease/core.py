@@ -54,7 +54,7 @@ def get_model(
     SeasonalNaiveModel,
     LSTMModel,
     MLPModel,
-    Tuple[MLModel, pd.DataFrame],
+    Tuple[Union[MLModel, LSTMModel, MLPModel], pd.DataFrame],
 ]:
     if model_name == 'arima':
         print('\n Training ARIMA model...')
@@ -81,39 +81,37 @@ def get_model(
             )
         return SeasonalNaiveModel(season_length=seasonal_length)
 
-    elif model_name in ['linear', 'rf', 'xgb', 'lgbm']:
+    elif model_name in ['linear', 'rf', 'xgb', 'lgbm', 'lstm', 'mlp']:
         if data.exog is None:
-            raise ValueError(' Exogenous data is required for ML models.')
+            raise ValueError(' Exogenous data is required for this model.')
 
-        print(f'\n Training ML model: {model_name}')
+        print(f'\n Training model: {model_name.upper()}')
         exog = data.exog.copy()
         exog['date'] = pd.to_datetime(exog['date'])
         exog.set_index('date', inplace=True)
         X = exog.reindex(y.index).fillna(method='ffill')
 
-        model = MLModel(model_type=model_name)
+        if model_name in ['linear', 'rf', 'xgb', 'lgbm']:
+            model = MLModel(model_type=model_name)
+        elif model_name == 'lstm':
+            model = LSTMModel(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+        else:
+            model = MLPModel(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+
         model.fit(X, y)
         return model, exog
-
-    elif model_name == 'lstm':
-        print('\n Training LSTM model...')
-        return LSTMModel(
-            window_size=window_size,
-            epochs=epochs,
-            batch_size=batch_size,
-            hidden_units=hidden_units,
-            activation=activation,
-        )
-
-    elif model_name == 'mlp':
-        print('\n Training MLP model...')
-        return MLPModel(
-            window_size=window_size,
-            epochs=epochs,
-            batch_size=batch_size,
-            hidden_units=hidden_units,
-            activation=activation,
-        )
 
     else:
         raise ValueError(f'Model "{model_name}" is not implemented.')
@@ -130,6 +128,7 @@ def run_model(
     batch_size: int,
     hidden_units: int,
     activation: str,
+    future_exog: Optional[pd.DataFrame] = None,
 ):
     result = get_model(
         model,
@@ -145,7 +144,16 @@ def run_model(
 
     if isinstance(result, tuple):
         m, exog = result
-        X_future = exog.iloc[-forecast_steps:]
+
+        if future_exog is not None:
+            future_exog = future_exog[exog.columns]
+            X_future = future_exog
+        else:
+            print(
+                ' Using last rows of exogenous data for forecasting (no --future_exog_path provided).'
+            )
+            X_future = exog.iloc[-forecast_steps:]
+
         return m.predict(X_future)
 
     m = result
@@ -156,6 +164,7 @@ def run_model(
 def run(
     endog_path: str,
     exog_path: Optional[str] = None,
+    future_exog_path: Optional[str] = None,
     explore: bool = False,
     model: Optional[str] = None,
     forecast_steps: int = 10,
@@ -173,6 +182,12 @@ def run(
     else:
         print('\n🛈 Skipping plots (use --explore to enable)')
 
+    future_exog = None
+    if future_exog_path:
+        print(f'Loading future exogenous data from: {future_exog_path}')
+        future_exog = pd.read_csv(future_exog_path, parse_dates=['date'])
+        future_exog.set_index('date', inplace=True)
+
     forecast = run_model(
         model=model,
         data=data,
@@ -184,6 +199,7 @@ def run(
         batch_size=batch_size,
         hidden_units=hidden_units,
         activation=activation,
+        future_exog=future_exog,
     )
 
     print(f'\n Forecast:\n{forecast}')
