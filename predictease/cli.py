@@ -99,4 +99,11 @@ def parse_args():
         help='Season length for seasonal naive model (e.g., 12 for monthly data with yearly seasonality)',
     )
 
+    parser.add_argument(
+        '--future_exog_path',
+        type=str,
+        default=None,
+        help='CSV file containing exogenous variables for forecasting (required for ML and NN models)',
+    )
+
     return parser.parse_args()
