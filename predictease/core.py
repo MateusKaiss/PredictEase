@@ -11,7 +11,6 @@ from .analysis.visualization import (
 from .models.arima import ARIMAModel
 from .models.baseline import MeanModel, NaiveModel, SeasonalNaiveModel
 from .models.ml_models import MLModel
-from .models.nn_models import LSTMModel, MLPModel
 from .models.prophet import ProphetModel
 
 
@@ -52,9 +51,8 @@ def get_model(
     NaiveModel,
     MeanModel,
     SeasonalNaiveModel,
-    LSTMModel,
-    MLPModel,
-    Tuple[MLModel, pd.DataFrame],
+    Tuple[object, pd.DataFrame],
+    object,
 ]:
     if model_name == 'arima':
         print('\n Training ARIMA model...')
@@ -83,9 +81,9 @@ def get_model(
 
     elif model_name in ['linear', 'rf', 'xgb', 'lgbm']:
         if data.exog is None:
-            raise ValueError(' Exogenous data is required for ML models.')
+            raise ValueError(' Exogenous data is required for this model.')
 
-        print(f'\n Training ML model: {model_name}')
+        print(f'\n Training model: {model_name.upper()}')
         exog = data.exog.copy()
         exog['date'] = pd.to_datetime(exog['date'])
         exog.set_index('date', inplace=True)
@@ -95,25 +93,40 @@ def get_model(
         model.fit(X, y)
         return model, exog
 
-    elif model_name == 'lstm':
-        print('\n Training LSTM model...')
-        return LSTMModel(
-            window_size=window_size,
-            epochs=epochs,
-            batch_size=batch_size,
-            hidden_units=hidden_units,
-            activation=activation,
-        )
+    elif model_name in ['lstm', 'mlp']:
+        if data.exog is not None:
+            from .models.nn_models_multivariate import LSTMModel, MLPModel
 
-    elif model_name == 'mlp':
-        print('\n Training MLP model...')
-        return MLPModel(
-            window_size=window_size,
-            epochs=epochs,
-            batch_size=batch_size,
-            hidden_units=hidden_units,
-            activation=activation,
-        )
+            print(f'\n Training model: {model_name.upper()} (multivariate)')
+            exog = data.exog.copy()
+            exog['date'] = pd.to_datetime(exog['date'])
+            exog.set_index('date', inplace=True)
+            X = exog.reindex(y.index).fillna(method='ffill')
+
+            model_cls = LSTMModel if model_name == 'lstm' else MLPModel
+            model = model_cls(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+            model.fit(X, y)
+            return model, exog
+        else:
+            from .models.nn_models_univariate import LSTMModel, MLPModel
+
+            print(f'\n Training model: {model_name.upper()} (univariate)')
+            model_cls = LSTMModel if model_name == 'lstm' else MLPModel
+            model = model_cls(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+            model.fit(y)
+            return model
 
     else:
         raise ValueError(f'Model "{model_name}" is not implemented.')
@@ -130,6 +143,7 @@ def run_model(
     batch_size: int,
     hidden_units: int,
     activation: str,
+    future_exog: Optional[pd.DataFrame] = None,
 ):
     result = get_model(
         model,
@@ -145,17 +159,28 @@ def run_model(
 
     if isinstance(result, tuple):
         m, exog = result
-        X_future = exog.iloc[-forecast_steps:]
+
+        if future_exog is not None:
+            future_exog = future_exog[exog.columns]
+            X_future = future_exog
+        else:
+            print(
+                ' Using last rows of exogenous data for forecasting (no --future_exog_path provided).'
+            )
+            X_future = exog.iloc[-forecast_steps:]
+
         return m.predict(X_future)
 
     m = result
-    m.fit(y)
+    if model in ['arima', 'prophet']:
+        m.fit(y)
     return m.predict(steps=forecast_steps)
 
 
 def run(
     endog_path: str,
     exog_path: Optional[str] = None,
+    future_exog_path: Optional[str] = None,
     explore: bool = False,
     model: Optional[str] = None,
     forecast_steps: int = 10,
@@ -173,6 +198,12 @@ def run(
     else:
         print('\n🛈 Skipping plots (use --explore to enable)')
 
+    future_exog = None
+    if future_exog_path:
+        print(f'Loading future exogenous data from: {future_exog_path}')
+        future_exog = pd.read_csv(future_exog_path, parse_dates=['date'])
+        future_exog.set_index('date', inplace=True)
+
     forecast = run_model(
         model=model,
         data=data,
@@ -184,6 +215,7 @@ def run(
         batch_size=batch_size,
         hidden_units=hidden_units,
         activation=activation,
+        future_exog=future_exog,
     )
 
     print(f'\n Forecast:\n{forecast}')
