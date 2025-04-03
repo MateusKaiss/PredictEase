@@ -11,9 +11,7 @@ from .analysis.visualization import (
 from .models.arima import ARIMAModel
 from .models.baseline import MeanModel, NaiveModel, SeasonalNaiveModel
 from .models.ml_models import MLModel
-from .models.nn_models import LSTMModel, MLPModel
 from .models.prophet import ProphetModel
-
 
 def load_and_prepare_data(
     endog_path: str, exog_path: Optional[str] = None
@@ -29,12 +27,10 @@ def load_and_prepare_data(
 
     return data, y
 
-
 def explore_data(data: TimeSeriesDataset) -> None:
     plot_endogenous(data)
     plot_exogenous_over_time(data)
     plot_exog_vs_endog(data)
-
 
 def get_model(
     model_name: str,
@@ -52,9 +48,8 @@ def get_model(
     NaiveModel,
     MeanModel,
     SeasonalNaiveModel,
-    LSTMModel,
-    MLPModel,
-    Tuple[Union[MLModel, LSTMModel, MLPModel], pd.DataFrame],
+    Tuple[object, pd.DataFrame],
+    object
 ]:
     if model_name == 'arima':
         print('\n Training ARIMA model...')
@@ -76,12 +71,10 @@ def get_model(
         print('\n Running baseline model: seasonal_naive')
         if seasonal_length is None:
             seasonal_length = 12
-            print(
-                f' No seasonal_length provided. Using default: {seasonal_length}'
-            )
+            print(f' No seasonal_length provided. Using default: {seasonal_length}')
         return SeasonalNaiveModel(season_length=seasonal_length)
 
-    elif model_name in ['linear', 'rf', 'xgb', 'lgbm', 'lstm', 'mlp']:
+    elif model_name in ['linear', 'rf', 'xgb', 'lgbm']:
         if data.exog is None:
             raise ValueError(' Exogenous data is required for this model.')
 
@@ -90,32 +83,48 @@ def get_model(
         exog['date'] = pd.to_datetime(exog['date'])
         exog.set_index('date', inplace=True)
         X = exog.reindex(y.index).fillna(method='ffill')
-
-        if model_name in ['linear', 'rf', 'xgb', 'lgbm']:
-            model = MLModel(model_type=model_name)
-        elif model_name == 'lstm':
-            model = LSTMModel(
-                window_size=window_size,
-                epochs=epochs,
-                batch_size=batch_size,
-                hidden_units=hidden_units,
-                activation=activation,
-            )
-        else:
-            model = MLPModel(
-                window_size=window_size,
-                epochs=epochs,
-                batch_size=batch_size,
-                hidden_units=hidden_units,
-                activation=activation,
-            )
-
+        model = MLModel(model_type=model_name)
         model.fit(X, y)
         return model, exog
 
+    elif model_name in ['lstm', 'mlp']:
+        if data.exog is not None:
+            from .models.nn_models_multivariate import LSTMModel, MLPModel
+
+            print(f'\n Training model: {model_name.upper()} (multivariate)')
+            exog = data.exog.copy()
+            exog['date'] = pd.to_datetime(exog['date'])
+            exog.set_index('date', inplace=True)
+            X = exog.reindex(y.index).fillna(method='ffill')
+
+            model_cls = LSTMModel if model_name == 'lstm' else MLPModel
+            model = model_cls(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+            model.fit(X, y)
+            return model, exog
+        else:
+            from .models.nn_models_univariate import LSTMModel, MLPModel
+
+            print(f'\n Training model: {model_name.upper()} (univariate)')
+            model_cls = LSTMModel if model_name == 'lstm' else MLPModel
+            model = model_cls(
+                window_size=window_size,
+                epochs=epochs,
+                batch_size=batch_size,
+                hidden_units=hidden_units,
+                activation=activation,
+            )
+            print(model)
+            model.fit(y)
+            return model
+
     else:
         raise ValueError(f'Model "{model_name}" is not implemented.')
-
 
 def run_model(
     model: str,
@@ -149,17 +158,13 @@ def run_model(
             future_exog = future_exog[exog.columns]
             X_future = future_exog
         else:
-            print(
-                ' Using last rows of exogenous data for forecasting (no --future_exog_path provided).'
-            )
+            print(' Using last rows of exogenous data for forecasting (no --future_exog_path provided).')
             X_future = exog.iloc[-forecast_steps:]
 
         return m.predict(X_future)
 
     m = result
-    m.fit(y)
     return m.predict(steps=forecast_steps)
-
 
 def run(
     endog_path: str,
