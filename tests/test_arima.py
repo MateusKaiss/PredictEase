@@ -1,5 +1,8 @@
+import re
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from predictease.models.arima import ARIMAModel
 
@@ -28,3 +31,12 @@ def test_arima_fit_and_forecast_linear():
     expected = pd.Series([last + 2 * (i + 1) for i in range(5)])
     mae = np.mean(np.abs(forecast.values - expected.values))
     assert mae < 1, f'High mean absolute error: {mae}'
+
+
+def test_arima_predict_before_fit_raises():
+    model = ARIMAModel()
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape('You need to call `.fit()` before predicting.'),
+    ):
+        model.predict(steps=3)
